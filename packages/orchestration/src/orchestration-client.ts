@@ -37,12 +37,12 @@ export class OrchestrationClient {
   /**
    * Creates an instance of the orchestration client.
    * @param config - Orchestration module configuration. This can either be an `OrchestrationModuleConfig` object or a JSON string obtained from AI Launchpad.
-   * @param deploymentConfig - Deployment configuration.
+   * @param deploymentConfig - Deployment configuration. Can specify either `resourceGroup` for deployment resolution, or `deploymentId` for direct deployment specification, or both. When `deploymentId` is provided, deployment resolution is skipped for better performance.
    * @param destination - The destination to use for the request.
    */
   constructor(
     private config: OrchestrationModuleConfig | string,
-    private deploymentConfig?: ResourceGroupConfig,
+    private deploymentConfig?: ResourceGroupConfig & { deploymentId?: string },
     private destination?: HttpDestinationOrFetchOptions
   ) {
     if (typeof config === 'string') {
@@ -119,11 +119,13 @@ export class OrchestrationClient {
             streamOptions
           );
 
-    const deploymentId = await resolveDeploymentId({
-      scenarioId: 'orchestration',
-      ...(this.deploymentConfig ?? {}),
-      destination: this.destination
-    });
+    const deploymentId = this.deploymentConfig?.deploymentId
+      ? this.deploymentConfig.deploymentId
+      : await resolveDeploymentId({
+          scenarioId: 'orchestration',
+          ...(this.deploymentConfig ?? {}),
+          destination: this.destination
+        });
 
     return executeRequest(
       {
